@@ -9,22 +9,19 @@ using CsvHelper.Configuration;
 using TMPro;
 using UnityEngine;
 
-public class CSVManager : MonoBehaviour
+public static class CSVManager
 {
-    private TMP_Text txtOut;
-    // Start is called before the first frame update
-    void Start()
-    {
-        txtOut = GetComponent<TMP_Text>();
-        
-        Demo();
-    }
-
-    IEnumerable<CSVEntry> ReadFile(string path = null)
+    
+    /// <summary>
+    /// Reads a CSV file ond return a list of CSV entrys
+    /// </summary>
+    /// <param name="path">defaults to Application.streamingAssetsPath + "/conteudo.csv"</param>
+    /// <returns>A list of CSVEntry</returns>
+    public static List<CSVEntry> ReadFile(string path = null)
     {
         if (path == null)
         {
-            path = Application.streamingAssetsPath + "/conteudo_.csv";
+            path = Application.streamingAssetsPath + "/conteudo.csv";
         }
         
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -37,38 +34,22 @@ public class CSVManager : MonoBehaviour
         using (var csv = new CsvReader(reader, config))
         {
 
-            csv.Context.RegisterClassMap<CSVFileMap>();
-            var records = csv.GetRecords<CSVEntry>();
+            IEnumerable<CSVEntry> records = new List<CSVEntry>();
+            csv.Context.RegisterClassMap<CSVEntry.Map>();
+            try
+            {
+                records = csv.GetRecords<CSVEntry>();
+            }
+            catch (CsvHelper.BadDataException ex)
+            {
+                Debug.LogError(ex.Message);
+            }
             return records.ToList();
         }
-    }
-    void Demo()
-    {
-        var records = ReadFile(Application.streamingAssetsPath + "/conteudo_.csv");
-        StringBuilder sb = new StringBuilder();
-        
-        try
-        {
-            foreach (var record in records)
-            {
-                sb.Append($"categoria: {record.Categoria}\n texto: {record.Texto}\n ===========\n");
-                Debug.Log($"categoria: {record.Categoria}\n texto: {record.Texto}\n ===========\n");
-            }
-                    
-        }
-        catch (CsvHelper.BadDataException ex)
-        {
-            sb.Append(ex.Message);
-        }
-
-        
-
-        txtOut.text = sb.ToString();
-
     }
 
     private static void BadDataFound(BadDataFoundArgs args)
     {
-        Console.WriteLine($"BAD DATA!: \n FIELD :{args.Field} \n RAW :{args.RawRecord}");
+        Debug.LogError($"BAD DATA reading {args.Context}!: \n FIELD :{args.Field} \n RAW :{args.RawRecord}");
     }
 }
